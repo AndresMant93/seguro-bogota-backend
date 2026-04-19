@@ -107,7 +107,8 @@ async function scrapearNoticias() {
   const feeds = [
     'https://www.rcnradio.com/feed',
     'https://www.bluradio.com/feed',
-    'https://caracol.com.co/feed',
+    'https://feeds.feedburner.com/semana/noticias',
+    'https://www.elcolombiano.com/rss/todas_las_noticias.xml',
   ];
 
   for (const feedUrl of feeds) {
@@ -121,17 +122,20 @@ async function scrapearNoticias() {
 
       const $ = cheerio.load(response.data, { xmlMode: true });
 
-      $('item').each((i, el) => {
-        const titulo = $(el).find('title').first().text().trim();
-        const descripcion = $(el).find('description').first().text().trim();
-        const enlace = $(el).find('link').first().text().trim();
+      // Intentar diferentes estructuras de RSS
+      const items = $('item').length > 0 ? $('item') : $('entry');
+
+      items.each((i, el) => {
+        const titulo = $(el).find('title').first().text().replace('<![CDATA[', '').replace(']]>', '').trim();
+        const descripcion = $(el).find('description, summary, content').first().text().replace('<![CDATA[', '').replace(']]>', '').trim();
+        const enlace = $(el).find('link').first().text().trim() || $(el).find('link').first().attr('href') || '';
 
         if (titulo && titulo.length > 10) {
-          noticias.push({ titulo, descripcion, enlace });
+          noticias.push({ titulo, descripcion: descripcion.substring(0, 300), enlace });
         }
       });
 
-      console.log(`Feed ${feedUrl}: OK`);
+      console.log(`Feed ${feedUrl}: ${$('item, entry').length} items`);
     } catch (error) {
       console.error(`Error en feed ${feedUrl}:`, error.message);
     }
@@ -140,7 +144,6 @@ async function scrapearNoticias() {
   console.log(`Total noticias encontradas: ${noticias.length}`);
   return noticias;
 }
-
 async function procesarNoticiasConIA(noticias) {
   if (noticias.length === 0) return;
 
