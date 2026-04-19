@@ -45,20 +45,25 @@ app.post('/analizar', async (req, res) => {
     }
 
     // Enviar reportes a OpenAI para análisis
-    const prompt = `
-Eres un analista de seguridad urbana para Bogotá, Colombia.
-Analiza los siguientes reportes de inseguridad y detecta patrones.
+   const prompt = `
+Eres un analista experto en seguridad urbana para Bogotá, Colombia. Tu tarea es analizar reportes de inseguridad y detectar patrones MUY ESPECÍFICOS.
 
 REPORTES:
 ${JSON.stringify(reportes, null, 2)}
 
-Por favor responde en JSON con este formato exacto:
+Instrucciones:
+1. Analiza el TIPO de delito específico (robo de celular, robo de vehículo, atraco a peatón, robo en transporte público, etc.)
+2. Identifica la HORA del día si hay un patrón (mañana, tarde, noche)
+3. Identifica la ZONA específica usando las coordenadas (barrio, localidad, avenida, etc. de Bogotá)
+4. La recomendación debe ser CONCRETA y dirigida a la Policía de Bogotá
+
+Responde en JSON con este formato exacto:
 {
   "hayAlerta": true o false,
   "nivelRiesgo": "alto", "medio" o "bajo",
-  "patron": "descripción breve del patrón detectado",
-  "zona": "nombre o descripción de la zona afectada",
-  "recomendacion": "recomendación para la Policía"
+  "patron": "descripción MUY específica del patrón. Ejemplo: 'Incremento de robos de celulares a peatones en horario nocturno entre 8pm y 11pm'",
+  "zona": "zona específica de Bogotá basada en las coordenadas. Ejemplo: 'Zona Rosa, Chapinero' o 'Carrera 7 con Calle 72, Chapinero'",
+  "recomendacion": "recomendación CONCRETA para la Policía. Ejemplo: 'Aumentar patrullaje a pie en la Carrera 13 entre Calles 63 y 72 en horario 8pm-11pm, con especial atención a personas usando audífonos o celulares'"
 }
 `;
 
