@@ -100,38 +100,44 @@ const cheerio = require('cheerio');
 const cron = require('node-cron');
 
 // ─── SCRAPER DE NOTICIAS ──────────────────────────────────────────────────────
-
 async function scrapearNoticias() {
   console.log('Iniciando scraping de noticias...');
   const noticias = [];
 
-  try {
-    // Scraping de El Tiempo - sección Bogotá
-    const response = await axios.get('https://www.eltiempo.com/bogota', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-      timeout: 10000,
-    });
+  const feeds = [
+    'https://www.rcnradio.com/feed',
+    'https://www.bluradio.com/feed',
+    'https://caracol.com.co/feed',
+  ];
 
-    const $ = cheerio.load(response.data);
+  for (const feedUrl of feeds) {
+    try {
+      const response = await axios.get(feedUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+        timeout: 10000,
+      });
 
-    // Buscar artículos de noticias
-    $('article, .c-article, .article-item').each((i, el) => {
-      const titulo = $(el).find('h2, h3, .title').first().text().trim();
-      const descripcion = $(el).find('p, .description, .summary').first().text().trim();
-      const enlace = $(el).find('a').first().attr('href');
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
-      if (titulo && titulo.length > 10) {
-        noticias.push({ titulo, descripcion, enlace });
-      }
-    });
+      $('item').each((i, el) => {
+        const titulo = $(el).find('title').first().text().trim();
+        const descripcion = $(el).find('description').first().text().trim();
+        const enlace = $(el).find('link').first().text().trim();
 
-    console.log(`Encontradas ${noticias.length} noticias`);
-  } catch (error) {
-    console.error('Error scraping El Tiempo:', error.message);
+        if (titulo && titulo.length > 10) {
+          noticias.push({ titulo, descripcion, enlace });
+        }
+      });
+
+      console.log(`Feed ${feedUrl}: OK`);
+    } catch (error) {
+      console.error(`Error en feed ${feedUrl}:`, error.message);
+    }
   }
 
+  console.log(`Total noticias encontradas: ${noticias.length}`);
   return noticias;
 }
 
