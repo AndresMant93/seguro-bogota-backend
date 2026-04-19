@@ -104,16 +104,18 @@ async function scrapearNoticias() {
   console.log('Iniciando scraping de noticias...');
   const noticias = [];
 
-  const feeds = [
-    'https://www.rcnradio.com/feed',
-    'https://www.bluradio.com/feed',
-    'https://feeds.feedburner.com/semana/noticias',
-    'https://www.elcolombiano.com/rss/todas_las_noticias.xml',
+  const queries = [
+    'robo Bogotá',
+    'atraco Bogotá',
+    'inseguridad Bogotá',
+    'hurto Bogotá',
   ];
 
-  for (const feedUrl of feeds) {
+  for (const query of queries) {
     try {
-      const response = await axios.get(feedUrl, {
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=es-419&gl=CO&ceid=CO:es-419`;
+      
+      const response = await axios.get(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
@@ -122,22 +124,19 @@ async function scrapearNoticias() {
 
       const $ = cheerio.load(response.data, { xmlMode: true });
 
-      // Intentar diferentes estructuras de RSS
-      const items = $('item').length > 0 ? $('item') : $('entry');
-
-      items.each((i, el) => {
-        const titulo = $(el).find('title').first().text().replace('<![CDATA[', '').replace(']]>', '').trim();
-        const descripcion = $(el).find('description, summary, content').first().text().replace('<![CDATA[', '').replace(']]>', '').trim();
-        const enlace = $(el).find('link').first().text().trim() || $(el).find('link').first().attr('href') || '';
+      $('item').each((i, el) => {
+        const titulo = $(el).find('title').first().text().trim();
+        const descripcion = $(el).find('description').first().text().trim();
+        const enlace = $(el).find('link').first().text().trim();
 
         if (titulo && titulo.length > 10) {
           noticias.push({ titulo, descripcion: descripcion.substring(0, 300), enlace });
         }
       });
 
-      console.log(`Feed ${feedUrl}: ${$('item, entry').length} items`);
+      console.log(`Query "${query}": ${$('item').length} items`);
     } catch (error) {
-      console.error(`Error en feed ${feedUrl}:`, error.message);
+      console.error(`Error en query "${query}":`, error.message);
     }
   }
 
