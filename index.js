@@ -95,7 +95,137 @@ Responde en JSON con este formato exacto:
 app.get('/', (req, res) => {
   res.json({ status: 'SeguroBogotá Backend funcionando ✅' });
 });
+const axios = require('axios');
+const cheerio = require('cheerio');
+const cron = require('node-cron');
 
+// ─── SCRAPER DE NOTICIAS ──────────────────────────────────────────────────────
+
+async function scrapearNoticias() {
+  console.log('Iniciando scraping de noticias...');
+  const noticias = [];
+
+  try {
+    // Scraping de El Tiempo - sección Bogotá
+    const response = await axios.get('https://www.eltiempo.com/bogota', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+      timeout: 10000,
+    });
+
+    const $ = cheerio.load(response.data);
+
+    // Buscar artículos de noticias
+    $('article, .c-article, .article-item').each((i, el) => {
+      const titulo = $(el).find('h2, h3, .title').first().text().trim();
+      const descripcion = $(el).find('p, .description, .summary').first().text().trim();
+      const enlace = $(el).find('a').first().attr('href');
+
+      if (titulo && titulo.length > 10) {
+        noticias.push({ titulo, descripcion, enlace });
+      }
+    });
+
+    console.log(`Encontradas ${noticias.length} noticias`);
+  } catch (error) {
+    console.error('Error scraping El Tiempo:', error.message);
+  }
+
+  return noticias;
+}
+
+async function procesarNoticiasConIA(noticias) {
+  if (noticias.length === 0) return;
+
+  const noticiasSeguridad = noticias.filter(n => {
+    const texto = (n.titulo + ' ' + n.descripcion).toLowerCase();
+    return texto.includes('robo') || texto.includes('hurto') ||
+           texto.includes('atraco') || texto.includes('inseguridad') ||
+           texto.includes('delito') || texto.includes('crimen') ||
+           texto.includes('secuestro') || texto.includes('extorsión') ||
+           texto.includes('homicidio') || texto.includes('banda');
+  });
+
+  console.log(`${noticiasSeguridad.length} noticias de seguridad encontradas`);
+
+  for (const noticia of noticiasSeguridad.slice(0, 5)) {
+    try {
+      const prompt = `
+Eres un analista de seguridad urbana para Bogotá. Analiza esta noticia y extrae información estructurada.
+
+NOTICIA:
+Título: ${noticia.titulo}
+Descripción: ${noticia.descripcion}
+
+Responde en JSON con este formato exacto:
+{
+  "esRelevante": true o false (solo true si es sobre un incidente de seguridad en Bogotá),
+  "tipo": "tipo de incidente (Robo con pistola, Robo con cuchillo o navaja, Raponeo, Chalequeo, Secuestro, Extorsión, Paseo millonario, Otro)",
+  "descripcion": "descripción breve del incidente",
+  "zona": "zona o barrio de Bogotá donde ocurrió (null si no se menciona)",
+  "lat": número de latitud aproximada en Bogotá (null si no se puede determinar),
+  "lng": número de longitud aproximada en Bogotá (null si no se puede determinar)
+}
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+      });
+
+      const resultado = JSON.parse(completion.choices[0].message.content);
+
+      if (resultado.esRelevante) {
+        // Verificar si ya existe esta noticia
+        const existe = await db.collection('reportes')
+          .where('fuente', '==', 'noticias')
+          .where('titulo', '==', noticia.titulo)
+          .get();
+
+        if (existe.empty) {
+          await db.collection('reportes').add({
+            tipo: resultado.tipo || 'Otro',
+            descripcion: resultado.descripcion,
+            zona: resultado.zona,
+            fecha: admin.firestore.FieldValue.serverTimestamp(),
+            ubicacion: new admin.firestore.GeoPoint(
+              resultado.lat || 4.6097,
+              resultado.lng || -74.0817
+            ),
+            fuente: 'noticias',
+            titulo: noticia.titulo,
+            enlace: noticia.enlace || null,
+            usuarioNombre: 'Bot de Noticias',
+            rol: 'Testigo',
+          });
+          console.log(`Reporte guardado: ${noticia.titulo}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error procesando noticia:', error.message);
+    }
+  }
+}
+
+// Ejecutar scraping cada 6 horas
+cron.schedule('0 */6 * * *', async () => {
+  console.log('Ejecutando scraping automático...');
+  const noticias = await scrapearNoticias();
+  await procesarNoticiasConIA(noticias);
+});
+
+// ─── RUTA MANUAL PARA DISPARAR EL SCRAPING ───────────────────────────────────
+app.post('/scraper', async (req, res) => {
+  try {
+    res.json({ mensaje: 'Scraping iniciado en segundo plano' });
+    const noticias = await scrapearNoticias();
+    await procesarNoticiasConIA(noticias);
+  } catch (error) {
+    console.error('Error en scraping:', error.message);
+  }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
