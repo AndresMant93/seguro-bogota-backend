@@ -166,14 +166,37 @@ NOTICIA:
 Título: ${noticia.titulo}
 Descripción: ${noticia.descripcion}
 
+REFERENCIA DE COORDENADAS DE BOGOTÁ:
+- Centro histórico (La Candelaria): lat 4.5981, lng -74.0761
+- Chapinero: lat 4.6473, lng -74.0631
+- Zona Rosa / Parque 93: lat 4.6673, lng -74.0534
+- Kennedy: lat 4.6270, lng -74.1470
+- Suba: lat 4.7416, lng -74.0832
+- Usaquén: lat 4.6949, lng -74.0300
+- Bosa: lat 4.5950, lng -74.1877
+- Engativá: lat 4.6985, lng -74.1146
+- Fontibón: lat 4.6714, lng -74.1469
+- Rafael Uribe Uribe: lat 4.5640, lng -74.1040
+- Ciudad Bolívar: lat 4.5279, lng -74.1590
+- Teusaquillo: lat 4.6368, lng -74.0880
+- Puente Aranda: lat 4.6133, lng -74.1058
+- Antonio Nariño: lat 4.5896, lng -74.1015
+- Santa Fe: lat 4.6018, lng -74.0736
+- TransMilenio Portal Norte: lat 4.7601, lng -74.0458
+- TransMilenio Portal Sur: lat 4.5717, lng -74.1344
+- TransMilenio Portal 80: lat 4.7089, lng -74.1194
+- Aeropuerto El Dorado: lat 4.7016, lng -74.1469
+- Centro Comercial Andino: lat 4.6678, lng -74.0530
+- Plaza de Bolívar: lat 4.5981, lng -74.0763
+
 Responde en JSON con este formato exacto:
 {
   "esRelevante": true o false (solo true si es sobre un incidente de seguridad en Bogotá),
   "tipo": "tipo de incidente (Robo con pistola, Robo con cuchillo o navaja, Raponeo, Chalequeo, Secuestro, Extorsión, Paseo millonario, Otro)",
-  "descripcion": "descripción breve del incidente",
-  "zona": "zona o barrio de Bogotá donde ocurrió (null si no se menciona)",
-  "lat": número de latitud aproximada en Bogotá (null si no se puede determinar),
-  "lng": número de longitud aproximada en Bogotá (null si no se puede determinar)
+  "descripcion": "descripción breve del incidente en máximo 2 oraciones",
+  "zona": "nombre exacto del barrio o zona de Bogotá donde ocurrió",
+  "lat": coordenada de latitud basada en la zona mencionada en la noticia (usa la referencia de arriba o calcula una aproximación),
+  "lng": coordenada de longitud basada en la zona mencionada en la noticia
 }
 `;
 
