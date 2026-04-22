@@ -157,7 +157,7 @@ async function procesarNoticiasConIA(noticias) {
 
   console.log(`${noticiasSeguridad.length} noticias de seguridad encontradas`);
 
-  for (const noticia of noticiasSeguridad.slice(0, 5)) {
+  for (const noticia of noticiasSeguridad.slice(0, 3)) {
     try {
       const prompt = `
 Eres un analista de seguridad urbana para Bogotá. Analiza esta noticia y extrae información estructurada.
